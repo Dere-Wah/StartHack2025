@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { v4 as uuidv4 } from "uuid";
 import { APP_URL, BACKEND_SERVER } from "../endpoints";
+import { useRouter } from "next/navigation";
 
 export default function WaiterPage() {
+  const router = useRouter();
   const [uuid, setUuid] = useState("");
   const [wsConnected, setWsConnected] = useState(false);
   const [loggedUser, setLoggedUser] = useState<null | string>(null);
@@ -25,6 +27,7 @@ export default function WaiterPage() {
         const data = JSON.parse(event.data);
         if (data.id === newUuid) {
           setLoggedUser(data.username);
+          router.push(`/interact?username=${data.username}`);
         }
       } catch (e) {
         console.error("Failed to parse WebSocket message:", e);
