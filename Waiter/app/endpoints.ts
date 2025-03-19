@@ -1,3 +1,3 @@
-export const BACKEND_SERVER = "http://localhost:8080";
-export const WS_SERVER = "ws://localhost:8080";
-export const APP_URL = "http://localhost:3000";
+export const BACKEND_SERVER = "https://waiter.derewah.dev:8888";
+export const WS_SERVER = "wss://waiter.derewah.dev:8888";
+export const APP_URL = "https://waiter.derewah.dev:3000";
