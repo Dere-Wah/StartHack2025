@@ -5,7 +5,7 @@ import { z } from "zod";
 import cors from "cors";
 
 const app = express();
-const port = 8888;
+const port = 8585;
 
 app.use(express.json());
 app.use(cors());
