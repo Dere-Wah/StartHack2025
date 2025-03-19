@@ -44,6 +44,7 @@ interface User {
 const users: User[] = [
   { username: "Bobby", password: "password123" },
   { username: "Alice", password: "alicepwd" },
+  { username: "Filippo", password: "fil03" },
 ];
 
 // Define the schema for the login request payload
