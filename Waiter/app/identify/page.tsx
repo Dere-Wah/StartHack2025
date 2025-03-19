@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { BACKEND_SERVER } from "../endpoints";
 
 export default function IdentifyPage() {
   const searchParams = useSearchParams();
@@ -17,13 +18,14 @@ export default function IdentifyPage() {
     const storedPassword = localStorage.getItem("password");
 
     if (storedUsername && storedPassword && id) {
-      handleLogin(storedUsername, storedPassword, true);
+      handleLogin(storedUsername, storedPassword, id, true);
     }
   }, [id]);
 
   const handleLogin = async (
     loginUsername: string,
     loginPassword: string,
+    id: string,
     isAutoLogin = false
   ) => {
     if (!id) return;
@@ -33,7 +35,7 @@ export default function IdentifyPage() {
 
     try {
       // Verify credentials
-      const authResponse = await fetch("/api/auth", {
+      const authResponse = await fetch(`${BACKEND_SERVER}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,6 +43,7 @@ export default function IdentifyPage() {
         body: JSON.stringify({
           username: loginUsername,
           password: loginPassword,
+          id: id,
         }),
       });
 
@@ -52,17 +55,6 @@ export default function IdentifyPage() {
       localStorage.setItem("username", loginUsername);
       localStorage.setItem("password", loginPassword);
 
-      // Confirm authentication
-      const confirmResponse = await fetch(`/api/confirm?id=${id}`, {
-        method: "POST",
-      });
-
-      if (!confirmResponse.ok) {
-        throw new Error("Failed to confirm authentication");
-      }
-
-      // Success - show confirmation message
-      setError("");
       alert("Authentication successful!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -80,7 +72,9 @@ export default function IdentifyPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="bg-red-50 p-4 rounded-lg">
-          <p className="text-red-600">Invalid or missing identification code.</p>
+          <p className="text-red-600">
+            Invalid or missing identification code.
+          </p>
         </div>
       </div>
     );
@@ -98,7 +92,7 @@ export default function IdentifyPage() {
           className="mt-8 space-y-6"
           onSubmit={(e) => {
             e.preventDefault();
-            handleLogin(username, password);
+            handleLogin(username, password, id);
           }}
         >
           <div className="rounded-md shadow-sm space-y-4">
