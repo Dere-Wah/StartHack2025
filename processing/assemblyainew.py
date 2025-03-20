@@ -1,7 +1,6 @@
-import io
+
 import tempfile
 
-import assemblyai as aai
 import openai as openai
 import os
 from dotenv import load_dotenv

@@ -8,6 +8,7 @@ from scipy.io import wavfile
 
 from assemblyainew import transcribe_audio_whisper
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
+from transcribe import transcribe_audio
 
 app = FastAPI()
 origins = ["*"]
@@ -37,11 +38,14 @@ async def process_audio(request: AudioRequest):
         # Restituisce alcuni parametri dell'audio
         rate, reduced_noise = reduce_audio_noise_from_audiofile(rate, data, prop_decrease=0.8)
 
-        output_file = save_wav_file(rate, reduced_noise)
+        transcription = transcribe_audio(
+            rate=rate,
+            reduced_noise=reduced_noise,
+            system_prompt="This is a generic prompt from a user trying to test."
+        )
 
-        transcribed_text = transcribe_audio_whisper(output_file)
-
-        return transcribed_text
+        print(transcription)
+        return transcription
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore nell'elaborazione dell'audio: {e}")

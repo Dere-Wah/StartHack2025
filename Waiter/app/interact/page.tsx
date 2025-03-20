@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Mic, MicOff } from "lucide-react";
 import { BACKEND_SERVER } from "../endpoints";
 import { useMicVAD } from "@ricky0123/vad-react";
+import { KrispNoiseFilter } from "@livekit/krisp-noise-filter";
+import { convertWebmToWavBase64 } from "../utils/audioUtils";
 
 export default function InteractPage() {
   const searchParams = useSearchParams();
@@ -48,8 +50,6 @@ export default function InteractPage() {
       }
     };
   }, [username, router]);
-
-  // Monitor voice activity changes and control recording
   useEffect(() => {
     if (vad.userSpeaking) {
       // Clear any pause timer if it exists
@@ -70,31 +70,39 @@ export default function InteractPage() {
           }
         };
 
-        mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current.onstop = async () => {
           if (recordingStartRef.current === null) return;
           const recordingEnd = Date.now();
           const duration = recordingEnd - recordingStartRef.current;
 
           // Only consider valid recordings longer than 0.1s
           if (duration > 100) {
-            const audioBlob = new Blob(audioChunksRef.current, {
+            const webmBlob = new Blob(audioChunksRef.current, {
               type: "audio/webm",
             });
-            const formData = new FormData();
-            formData.append("file", audioBlob, "recording.webm");
-
-            fetch("https://waiter-api.derewah.dev/audio", {
-              method: "POST",
-              body: formData,
-            })
-              .then((response) => {
-                console.log("Audio sent. Duration:", duration, "ms");
-                setRecordedLength(duration);
+            try {
+              // Convert the WebM blob to a WAV file as base64
+              const wavBase64 = await convertWebmToWavBase64(webmBlob);
+              const payload = {
+                id: Date.now().toString(),
+                data: wavBase64,
+              };
+              fetch("http://localhost:8082/audio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
               })
-              .catch((error) => {
-                console.error("Failed to send audio:", error);
-                setRecordedLength(duration);
-              });
+                .then((response) => {
+                  console.log("Audio sent. Duration:", duration, "ms");
+                  setRecordedLength(duration);
+                })
+                .catch((error) => {
+                  console.error("Failed to send audio:", error);
+                  setRecordedLength(duration);
+                });
+            } catch (error) {
+              console.error("Error converting audio:", error);
+            }
           } else {
             console.log("Recording too short, discarded");
           }

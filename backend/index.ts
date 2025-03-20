@@ -3,6 +3,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import cors from "cors";
+import type { Conversation, Conversations } from "./types";
+import { generateAssistantResponse } from "./openai/assistant";
 
 const app = express();
 const port = 8081;
@@ -15,6 +17,9 @@ const wss = new WebSocketServer({ noServer: true });
 
 // Pool to store all connected WebSocket clients
 const websocketPool: Set<WebSocket> = new Set();
+
+// Store for conversations
+const conversations: Conversations = {};
 
 // Handle WebSocket connections
 wss.on("connection", (ws: WebSocket, request: Request) => {
@@ -46,6 +51,60 @@ const users: User[] = [
   { username: "Alice", password: "alicepwd" },
   { username: "Filippo", password: "fil03" },
 ];
+
+// Define the schema for the assistant request payload
+const convoSchema = z.object({
+  username: z.string(),
+  id: z.string(),
+  message: z.string(),
+});
+
+// Assistant route to handle conversation messages
+app.post("/api/assistant", async (req, res) => {
+  const parseResult = convoSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: parseResult.error.errors });
+    return;
+  }
+
+  const { username, id, message } = parseResult.data;
+
+  // Initialize conversation if it doesn't exist
+  if (!conversations[id]) {
+    conversations[id] = {
+      id,
+      username,
+      messages: [],
+    };
+  }
+
+  // Add user message to conversation
+  conversations[id].messages.push({
+    role: "user",
+    content: message,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    // Generate assistant response
+    const assistantResponse = await generateAssistantResponse(
+      conversations[id]
+    );
+
+    // Add assistant response to conversation
+    conversations[id].messages.push({
+      role: "assistant",
+      content: assistantResponse,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Return the full conversation
+    res.json(conversations[id]);
+  } catch (error) {
+    console.error("Error in assistant endpoint:", error);
+    res.status(500).json({ error: "Failed to process assistant response" });
+  }
+});
 
 // Define the schema for the login request payload
 const loginSchema = z.object({
