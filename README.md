@@ -31,11 +31,5 @@ Voice labeling is achieved by understanding the context of the conversation and 
 - **Expanded Order Customization** to refine personalization.
 
 ## Contributors
-This project is developed by [Your Name/Team Name].
-
-## License
-[Specify License, e.g., MIT, Apache 2.0]
-
-## Contact
-For questions or contributions, please reach out at [Your Contact Information].
+This project is developed by "P&P s.r.l.".
 
