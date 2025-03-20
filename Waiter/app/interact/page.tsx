@@ -34,7 +34,6 @@ export default function InteractPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const lastDeltaTextRef = useRef<string>("");
-
   const vad = useMicVAD({
     onSpeechEnd: (audio: Float32Array) => {
       console.log("User stopped talking");

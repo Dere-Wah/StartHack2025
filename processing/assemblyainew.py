@@ -4,6 +4,7 @@ import tempfile
 import openai as openai
 import os
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -57,3 +58,22 @@ def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
         )
 
     return transcription
+
+def is_pertinent(transcribe: str):
+    openai.api_key = OPENAI_KEY
+
+    client = OpenAI()
+    systemprompt = """Respond to the following question only with "TRUE" or "FALSE".
+                    \nDO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT. """
+
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": f"{systemprompt}"},
+            {"role": "user", "content": f"""Could the following message be related to a normal conversation between a customer and a waiter?"
+                                        f"RESPOND ONLY WITH TRUE or FALSE
+                                        \nMessage:\n{transcribe}
+                                        """}
+        ]
+    )
+    return ("TRUE" in response.choices[0].message.content.upper().split(" ")) and not ("FALSE" in response.choices[0].message.content.upper().split(" "))

@@ -26,13 +26,15 @@ export async function handleAudioMessage(
             transcript: data.transcription,
           })
         );
-        await handleTranscript(
-          data.transcription,
-          username,
-          convUuid,
-          websocket,
-          data.user_summary
-        );
+        if (data.transcription) {
+          await handleTranscript(
+            data.transcription,
+            username,
+            convUuid,
+            websocket,
+            data.user_summary
+          );
+        }
       }
     })
     .catch((error) => {

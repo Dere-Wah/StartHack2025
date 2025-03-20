@@ -9,7 +9,7 @@ import requests  # Changed to requests library
 
 from scipy.io import wavfile
 
-from assemblyainew import transcribe_audio_whisper
+from assemblyainew import transcribe_audio_whisper, is_pertinent
 from database import getSummary, initialize_database, get_latest_summaries, getRecap
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
 from summary import generate_summary
@@ -72,7 +72,13 @@ async def process_audio(request: AudioRequest):
         summaries = getRecap(request.username)
         print(summaries)
         result = {"transcription": transcription, "user_summary": summaries}
-        return result
+
+        if is_pertinent(transcription):
+            return result
+        else:
+            print("Ignoring useless conversation")
+            return {"transcription": None}
+
 
     except Exception as e:
         print(e)
