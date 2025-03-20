@@ -6,3 +6,4 @@ assemblyai~=0.37.0
 openai~=1.59.4
 noisereduce~=3.0.3
 numpy~=1.26.4
+python-dotenv
