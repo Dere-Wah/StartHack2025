@@ -27,7 +27,7 @@ export default function WaiterPage() {
         const data = JSON.parse(event.data);
         if (data.id === newUuid) {
           setLoggedUser(data.username);
-          router.push(`/interact?username=${data.username}`);
+          router.push(`/interact?username=${data.username}&uuid=${newUuid}`);
         }
       } catch (e) {
         console.error("Failed to parse WebSocket message:", e);

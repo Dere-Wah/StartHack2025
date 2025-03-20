@@ -7,11 +7,13 @@ import { BACKEND_SERVER } from "../endpoints";
 import { useMicVAD } from "@ricky0123/vad-react";
 import { KrispNoiseFilter } from "@livekit/krisp-noise-filter";
 import { convertWebmToWavBase64 } from "../utils/audioUtils";
+import { v4 as uuidv4 } from "uuid";
 
 export default function InteractPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const username = searchParams.get("username");
+  const uuid = searchParams.get("uuid") || uuidv4(); // Generate new UUID if not provided
   const vad = useMicVAD({
     onSpeechEnd: (audio: Float32Array) => {
       console.log("User stopped talking");
@@ -84,7 +86,8 @@ export default function InteractPage() {
               // Convert the WebM blob to a WAV file as base64
               const wavBase64 = await convertWebmToWavBase64(webmBlob);
               const payload = {
-                id: Date.now().toString(),
+                id: uuid,
+                username: username,
                 data: wavBase64,
               };
               fetch("http://localhost:8082/audio", {
