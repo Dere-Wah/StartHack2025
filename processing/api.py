@@ -10,7 +10,7 @@ import requests  # Changed to requests library
 from scipy.io import wavfile
 
 from assemblyainew import transcribe_audio_whisper
-from database import getSummary
+from database import getSummary, initialize_database
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
 from summary import generate_summary
 from transcribe import transcribe_audio
@@ -25,14 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create database and table if they don't exist
-with sqlite3.connect('summaries.db') as conn:
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            summary TEXT
-        )
-    ''')
+initialize_database()
 
 class AudioRequest(BaseModel):
     id: str

@@ -58,9 +58,10 @@ interface User {
 }
 
 const users: User[] = [
-  { username: "Bobby", password: "password123" },
-  { username: "Alice", password: "alicepwd" },
-  { username: "Filippo", password: "fil03" },
+  { username: "Davide", password: "davide123" },
+  { username: "Marco", password: "marco123" },
+  { username: "Laura", password: "laura123" },
+  { username: "Giulia", password: "giulia123" },
 ];
 
 // Define the schema for the assistant request payload
