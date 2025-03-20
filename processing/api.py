@@ -67,7 +67,7 @@ async def process_audio(request: AudioRequest):
             system_prompt="This is a customer taking an order from a pizzeria. The customer's name is " + request.username + " and the user is talking in english."
         )
         #endpoint = "https://waiter-api.derewah.dev/api/assistant"
-        endpoint = "http://localhost:8081/api/assistant"
+        endpoint = "http://waiter-api.derewah.dev/api/assistant"
 
         summ = getSummary(request.username)
         if(summ == None):

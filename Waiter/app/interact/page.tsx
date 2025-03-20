@@ -92,7 +92,7 @@ export default function InteractPage() {
         })),
       });
 
-      fetch("http://localhost:8082/analyze", {
+      fetch("http://waiter-api.derewah.dev/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -155,7 +155,7 @@ export default function InteractPage() {
                 username: username,
                 data: wavBase64,
               };
-              fetch("http://localhost:8082/audio", {
+              fetch("http://waiter-api.derewah.dev/audio", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
