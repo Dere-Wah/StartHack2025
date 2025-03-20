@@ -60,9 +60,7 @@ def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
     return transcription
 
 def is_pertinent(transcribe: str):
-    openai.api_key = OPENAI_KEY
-
-    client = OpenAI()
+    client = OpenAI(api_key=OPENAI_KEY)
     systemprompt = """Respond to the following question only with "TRUE" or "FALSE".
                     \nDO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT. """
 
