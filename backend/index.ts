@@ -109,8 +109,6 @@ app.post("/api/assistant", async (req, res) => {
     timestamp: new Date().toISOString(),
   });
 
-  console.log(conversations[id]);
-
   try {
     // Generate assistant response
     const assistantResponse = await generateAssistantResponse(
