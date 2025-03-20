@@ -52,7 +52,8 @@ async def process_audio(request: AudioRequest):
             json={
                 "username": request.username,
                 "id": request.id,  # Use the provided id from the request
-                "message": transcription
+                "message": transcription,
+                "user_summary": "The user usually orders pizza and coca cola. Also has an allergy for gluten."
             }
         )
         api_response.raise_for_status()  # Raise exception for HTTP errors
