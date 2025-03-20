@@ -1,7 +1,6 @@
 import sqlite3
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
 import io
@@ -14,8 +13,10 @@ from database import getSummary, initialize_database
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
 from summary import generate_summary
 from transcribe import transcribe_audio
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
 origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
@@ -67,7 +68,7 @@ async def process_audio(request: AudioRequest):
             system_prompt="This is a customer taking an order from a pizzeria. The customer's name is " + request.username + " and the user is talking in english."
         )
         #endpoint = "https://waiter-api.derewah.dev/api/assistant"
-        endpoint = "http://waiter-api.derewah.dev/api/assistant"
+        endpoint = "https://waiter-api.derewah.dev/api/assistant"
 
         summ = getSummary(request.username)
         if(summ == None):
