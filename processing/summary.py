@@ -1,11 +1,11 @@
 import json
+import os
 
 from openai import OpenAI
 
 from database import getSummary, setSummary
 
-api_key = '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'
-
+api_key = os.getenv('OPENAI_KEY')
 systemprompt = "You are the best waiter in the world you try to remember everything relevant to every costumer."
 
 
