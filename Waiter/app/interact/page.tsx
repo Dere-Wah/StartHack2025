@@ -11,19 +11,19 @@ export default function InteractPage() {
   const router = useRouter();
   const username = searchParams.get("username");
   const vad = useMicVAD({
-    onSpeechEnd: (audio) => {
+    onSpeechEnd: (audio: Float32Array) => {
       console.log("User stopped talking");
     },
   });
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedLength, setRecordedLength] = useState(null);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordedLength, setRecordedLength] = useState<number | null>(null);
 
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const pauseTimerRef = useRef(null);
-  const recordingStartRef = useRef(null);
-  const streamRef = useRef(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingStartRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!username) {
@@ -71,8 +71,10 @@ export default function InteractPage() {
         };
 
         mediaRecorderRef.current.onstop = () => {
+          if (recordingStartRef.current === null) return;
           const recordingEnd = Date.now();
           const duration = recordingEnd - recordingStartRef.current;
+
           // Only consider valid recordings longer than 0.1s
           if (duration > 100) {
             const audioBlob = new Blob(audioChunksRef.current, {
