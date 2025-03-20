@@ -1,9 +1,8 @@
 uvicorn
 fastapi
 pydantic
-scipy
-assemblyai
-openai
+scipy~=1.15.1
+openai~=1.67.0
+python-dotenv
 noisereduce
 numpy
-python-dotenv

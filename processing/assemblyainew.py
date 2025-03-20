@@ -10,24 +10,6 @@ load_dotenv()
 
 OPENAI_KEY = os.getenv('OPENAI_KEY')
 
-
-def transcribe_audio_assemblyai(file_url, api_key=OPENAI_KEY):
-    """
-  Transcribes an audio file using AssemblyAI API with speaker labels.
-
-  Parameters:
-      file_url (str): URL or path to the audio file.
-      api_key (str): Your AssemblyAI API key.
-
-  Returns:
-      transcript: The transcript object containing the utterances.
-  """
-    aai.settings.api_key = api_key
-    config = aai.TranscriptionConfig(speaker_labels=True, language_code='it')
-    transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(file_url, config=config)
-    return transcript.text
-
 def transcribe_audio_whisper(file_path: str):
     """
     Trascrive un file audio utilizzando l'API Whisper di OpenAI con la nuova interfaccia.
@@ -61,7 +43,7 @@ def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
     Returns:
         dict: Il risultato della trascrizione ottenuto dall'API Whisper.
     """
-    openai.api_key = r''
+    openai.api_key = OPENAI_KEY
 
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
         tmp.write(audio_bytes)
