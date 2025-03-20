@@ -1,4 +1,3 @@
-
 import tempfile
 
 import openai as openai
@@ -9,6 +8,7 @@ from openai import OpenAI
 load_dotenv()
 
 OPENAI_KEY = os.getenv('OPENAI_KEY')
+
 
 def transcribe_audio_whisper(file_path: str):
     """
@@ -30,6 +30,7 @@ def transcribe_audio_whisper(file_path: str):
         #response_format='verbose_json'
     )
     return transcription
+
 
 def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
     """
@@ -59,18 +60,21 @@ def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
 
     return transcription
 
+
 def is_pertinent(transcribe: str):
+    openai.api_key = OPENAI_KEY
+
     systemprompt = """Respond to the following question only with "TRUE" or "FALSE".
-                    \nDO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT. """
+        DO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT."""
 
     response = openai.chat.completions.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": f"{systemprompt}"},
-            {"role": "user", "content": f"""Could the following message be related to a normal conversation between a customer and a waiter?"
-                                        f"RESPOND ONLY WITH TRUE or FALSE
-                                        \nMessage:\n{transcribe}
-                                        """}
+            {"role": "system", "content": systemprompt},
+            {"role": "user",
+             "content": f'Could the following message be related to a normal conversation between a customer and a waiter?\n\nMessage:\n"{transcribe}"\n\nRESPOND ONLY WITH TRUE or FALSE'}
         ]
     )
-    return ("TRUE" in response.choices[0].message.content.upper().split(" ")) and not ("FALSE" in response.choices[0].message.content.upper().split(" "))
+
+    response_text = response.choices[0].message.content.strip().upper()
+    return response_text == "TRUE"
