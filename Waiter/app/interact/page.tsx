@@ -68,6 +68,56 @@ export default function InteractPage() {
   }, [username, router]);
 
   useEffect(() => {
+    // Check for CONVERSATION_END in the latest assistant message
+    const messages = conversation?.messages || [];
+    const lastMessage = messages[messages.length - 1];
+
+    if (
+      lastMessage?.role === "assistant" &&
+      lastMessage.content.includes("CONVERSATION_END")
+    ) {
+      // Stop all audio tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      // Send conversation for analysis
+      const conversationJson = JSON.stringify({
+        id: conversation?.id,
+        username: conversation?.username,
+        messages: conversation?.messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        })),
+      });
+
+      fetch("http://localhost:8082/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          final_json: conversationJson,
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(() => {
+          router.push("/finalize");
+        })
+        .catch((error) => {
+          console.error("Failed to send conversation for analysis:", error);
+          router.push("/finalize"); // Still redirect even if analysis fails
+        });
+    }
+  }, [conversation, router]);
+
+  useEffect(() => {
     if (vad.userSpeaking) {
       // Clear any pause timer if it exists
       if (pauseTimerRef.current) {
@@ -170,27 +220,36 @@ export default function InteractPage() {
         {/* Conversation Display */}
         <div className="bg-gray-50 rounded-lg p-4 h-[60vh] overflow-y-auto">
           <div className="space-y-4">
-            {conversation?.messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+            {conversation?.messages
+              .filter(
+                (message) =>
+                  message.role !== "system" &&
+                  !(
+                    message.role === "assistant" &&
+                    message.content.includes("CONVERSATION_END")
+                  )
+              )
+              .map((message, index) => (
                 <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    message.role === "user"
-                      ? "bg-black text-white"
-                      : "bg-gray-200 text-gray-900"
+                  key={index}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs mt-1 opacity-70">
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </p>
+                  <div
+                    className={`max-w-[80%] rounded-lg p-4 ${
+                      message.role === "user"
+                        ? "bg-black text-white"
+                        : "bg-gray-200 text-gray-900"
+                    }`}
+                  >
+                    <p className="text-sm">{message.content}</p>
+                    <p className="text-xs mt-1 opacity-70">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             <div ref={messagesEndRef} />
           </div>
         </div>

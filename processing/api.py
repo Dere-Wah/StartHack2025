@@ -1,3 +1,5 @@
+import sqlite3
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +10,9 @@ import requests  # Changed to requests library
 from scipy.io import wavfile
 
 from assemblyainew import transcribe_audio_whisper
+from database import getSummary
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
+from summary import generate_summary
 from transcribe import transcribe_audio
 
 app = FastAPI()
@@ -21,10 +25,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create database and table if they don't exist
+with sqlite3.connect('summaries.db') as conn:
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            summary TEXT
+        )
+    ''')
+
 class AudioRequest(BaseModel):
     id: str
     username: str
     data: str  # Base64 encoded binary audio (.wav)
+
+
+class AnalyzeConversation(BaseModel):
+    final_json: str
+
+
+
+@app.post("/analyze")
+async def analyze_json(request: AnalyzeConversation):
+    try:
+        print(request.final_json)
+        generate_summary(request.final_json)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error processing audio: {str(e)}")
+
 
 @app.post("/audio")
 async def process_audio(request: AudioRequest):
@@ -43,23 +71,33 @@ async def process_audio(request: AudioRequest):
         transcription = transcribe_audio(
             rate=rate,
             reduced_noise=reduced_noise,
-            system_prompt="This is a generic prompt from a user trying to test."
+            system_prompt="This is a customer taking an order from a pizzeria. The customer's name is " + request.username + " and the user is talking in english."
         )
+        #endpoint = "https://waiter-api.derewah.dev/api/assistant"
+        endpoint = "http://localhost:8081/api/assistant"
+
+        summ = getSummary(request.username)
+        if(summ == None):
+            summ = "NONE"
+        print(summ)
 
         # Send transcription to external API using requests
         api_response = requests.post(
-            "https://waiter-api.derewah.dev/api/assistant",
+            endpoint,
             json={
                 "username": request.username,
                 "id": request.id,  # Use the provided id from the request
                 "message": transcription,
-                "user_summary": "The user usually orders pizza and coca cola. Also has an allergy for gluten."
+                "user_summary": summ
             }
         )
         api_response.raise_for_status()  # Raise exception for HTTP errors
 
+
+        intermediate_response = api_response.json()
+
         # Return the JSON response from the external API
-        return api_response.json()
+        return intermediate_response
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing audio: {str(e)}")

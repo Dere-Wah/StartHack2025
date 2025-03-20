@@ -11,11 +11,13 @@ const port = 8081;
 
 const WAITER_PROMPT =
   "You are a waiter, taking an order at a pizzeria restaurant. " +
+  "When the user explicitly tells you that the conversation is over, and they already have given you the order, please send a message with the keyword CONVERSATION_END" +
   "The order is being trascripted from voice, so the text might not 100% accurate." +
   "In this case, try to guess what the user was trying to say. Make your best attempt at guessing," +
   "and if you are not sure tell the user what you understand. If that's not right they will stop you and correct you." +
   "If there are empty sentences picked up by background noise simply ignore them and reply with a simple hmhm as if you were listening" +
   "If the audio picksup some nonsensical text, just ignore it and ask the user to repeat if you are missing context." +
+  +"If you are unsure about something the customer told you, becuase it got lost in the noise, try to predict it with the summary you have. Maybe do some small talk about it." +
   " Next you can find the usual preferences and habits of the user. Use them to deduce context such as ordering the usual, or for small talk.\n";
 
 app.use(express.json());
@@ -92,7 +94,8 @@ app.post("/api/assistant", async (req, res) => {
     if (user_summary) {
       conversations[id].messages.push({
         role: "system",
-        content: WAITER_PROMPT + user_summary,
+        content:
+          WAITER_PROMPT + user_summary + " Also the user is called " + username,
         timestamp: new Date().toISOString(),
       });
     }
@@ -104,6 +107,8 @@ app.post("/api/assistant", async (req, res) => {
     content: message,
     timestamp: new Date().toISOString(),
   });
+
+  console.log(conversations[id]);
 
   try {
     // Generate assistant response

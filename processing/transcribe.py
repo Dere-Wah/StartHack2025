@@ -32,7 +32,8 @@ def transcribe_audio(rate, reduced_noise, system_prompt=""):
     transcription = client.audio.transcriptions.create(
         model="whisper-1",
         file=("audio.wav", audio_buffer, "audio/wav"),
-        prompt=system_prompt
+        prompt=system_prompt,
+        language="en"
     )
 
     return transcription.text
