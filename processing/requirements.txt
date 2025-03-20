@@ -1,9 +1,8 @@
-uvicorn~=0.34.0
-fastapi~=0.112.2
-pydantic~=2.10.4
-scipy~=1.15.1
-assemblyai~=0.37.0
+uvicorn
+fastapi
+pydantic
+scipy
 openai~=1.67.0
-python-dotenv~=0.21.0
-noisereduce~=3.0.3
-numpy~=1.26.4
+python-dotenv
+noisereduce
+numpy
