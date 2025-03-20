@@ -235,6 +235,8 @@ export default function InteractPage() {
         },
         body: JSON.stringify({
           final_json: conversationJson,
+          username: username,
+          id: convUuid,
         }),
       })
         .then((response) => {

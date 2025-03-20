@@ -10,7 +10,7 @@ import requests  # Changed to requests library
 from scipy.io import wavfile
 
 from assemblyainew import transcribe_audio_whisper
-from database import getSummary, initialize_database
+from database import getSummary, initialize_database, get_latest_summaries, getRecap
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
 from summary import generate_summary
 from transcribe import transcribe_audio
@@ -37,13 +37,15 @@ class AudioRequest(BaseModel):
 
 class AnalyzeConversation(BaseModel):
     final_json: str
+    username: str
+    id: str
 
 
 
 @app.post("/analyze")
 async def analyze_json(request: AnalyzeConversation):
     try:
-        generate_summary(request.final_json)
+        generate_summary(request.username, request.id, request.final_json)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing audio: {str(e)}")
 
@@ -67,7 +69,9 @@ async def process_audio(request: AudioRequest):
             reduced_noise=reduced_noise,
             system_prompt="Uhmmm, my name is uhh" + request.username + "and I am making uhh an order at an Italian Pizzeria."
         )
-        result = {"transcription": transcription, "user_summary": getSummary(request.username)}
+        summaries = getRecap(request.username)
+        print(summaries)
+        result = {"transcription": transcription, "user_summary": summaries}
         return result
 
     except Exception as e:

@@ -16,8 +16,8 @@ const WAITER_PROMPT =
   "and if you are not sure tell the user what you understand. If that's not right they will stop you and correct you." +
   "If there are empty sentences picked up by background noise simply ignore them and reply with a simple hmhm as if you were listening" +
   "If the audio picksup some nonsensical text, just ignore it and ask the user to repeat if you are missing context." +
-  +"If you are unsure about something the customer told you, becuase it got lost in the noise, try to predict it with the summary you have. Maybe do some small talk about it." +
-  " Next you can find the usual preferences and habits of the user. Use them to deduce context such as ordering the usual, or for small talk.\n";
+  "If you are unsure about something the customer told you, becuase it got lost in the noise, try to predict it with the summary you have. Maybe do some small talk about it." +
+  " Next you can find the usual preferences and habits of the user. Use them to deduce context such as ordering the usual, or for small talk. For the small talk, feel free to use the information from the user summary to begin and ask questions about the user to involve them.\n";
 
 export async function handleTranscript(
   transcript: string,
@@ -34,7 +34,8 @@ export async function handleTranscript(
       messages: [
         {
           role: "system",
-          content: WAITER_PROMPT + user_summary,
+          content:
+            WAITER_PROMPT + user_summary + "The user is called " + username,
           timestamp: new Date().toISOString(),
         },
       ],
@@ -51,7 +52,7 @@ export async function handleTranscript(
   try {
     const messageId = `msg_${Date.now()}`; // Generate a unique message ID
     const stream = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: conversations[convUuid].messages.map((msg) => ({
         role: msg.role,
         content: msg.content,

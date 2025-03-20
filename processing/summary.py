@@ -3,7 +3,7 @@ import os
 
 from openai import OpenAI
 
-from database import getSummary, setSummary
+from database import getSummary, setSummary, get_latest_summaries, setRecap
 
 api_key = os.getenv('OPENAI_KEY')
 systemprompt = "You are the best waiter in the world you try to remember everything relevant to every costumer."
@@ -11,12 +11,11 @@ systemprompt = "You are the best waiter in the world you try to remember everyth
 
 def parse_json(text: str):
     data = json.loads(text)
-    username = data["username"]
     text = ""
     for message in data['messages']:
         text += (message['content'] + "  ")
 
-    return text, username
+    return text
 
 
 def separation_prompt(text: str) -> str:
@@ -58,22 +57,44 @@ def separation_prompt(text: str) -> str:
     return response.choices[0].message.content
 
 
-def extract_from_conv_prompt(text: str, summary: str):
+def extract_from_conv_prompt(text: str):
     client = OpenAI(api_key=api_key)
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system",
-             "content": "You are the best waiter in the world you try to remember everything relevant costumer."},
-            {"role": "user", "content": f"""Given that the conversation leader is identified, write summary about this person based on their role in the dialogue and what we already know (known summary).
-                                        If the known summary is "NONE" ignore it
-                                        Focus their dietary preferences, any restrictions they might have, and the types of food they typically enjoy or order and on anything eating-related.
-                                        The summary should be concise and schematic, with crucial information about the order.
-                                        Here is the known summary:
-                                        {summary}
-
+             "content": "You are a waiter, and have just finished taking an order for an user. "
+                        "You must now write a summary about this person's order based on their role in the dialogue. "
+                        "Focus their dietary preferences, any restrictions they might have, and the types of food they "
+                        "typically enjoy or order and on anything eating-related. "
+                        "The summary should be concise and schematic, with crucial information about the order."
+                        "Make the summary of this order and what was asked., and maybe details about the user. "
+                        "Keep relevant details that might necessary for fidelizing the user, but ignore "
+                        "non relevant information. You just need to reply with the recap, no assistant message."},
+            {"role": "user", "content": f"""
                                         Here is the dialogue:
+                                        {text}"""}
+        ]
+    )
+    return response.choices[0].message.content
+
+
+def extract_recap_from_orders(text: str):
+    client = OpenAI(api_key=api_key)
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system",
+             "content": "You are a waiter, keeping track of customers. You will need to generate a recap of a user's"
+                        "habits based on their last 10 orders, each with a timestamp. So maybe store information about"
+                        "diets, preferences, what his usual is, and maybe small informations to make small talk with"
+                        "the customer. The recap should short and schematic, just holding the crucial information."
+                        "Should not resemble natural speech, but more of a schema of the user's preferences and tastes."
+                        "You just need to reply with the recap, no assistant message."},
+            {"role": "user", "content": f"""
+                                        Here is the recap of the last 10 orders:
                                         {text}"""}
         ]
     )
@@ -85,8 +106,9 @@ def understand_conv_leader(conversation, known_info):
     nuovo_sum = extract_from_conv_prompt(resp, known_info)
     return nuovo_sum
 
-def generate_summary(input_json: str):
-    inputa, username = parse_json(input_json)
-    old_summary = getSummary(username)
-    new_summary = extract_from_conv_prompt(inputa, old_summary)
-    setSummary(username, new_summary)
+def generate_summary(username, order_id, conversation):
+    convo = parse_json(conversation)
+    summary = extract_from_conv_prompt(convo)
+    setSummary(username, order_id, summary)
+    user_recap = extract_recap_from_orders(get_latest_summaries(username, 10))
+    setRecap(username, user_recap)
