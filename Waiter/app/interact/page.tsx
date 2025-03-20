@@ -8,12 +8,18 @@ import { useMicVAD } from "@ricky0123/vad-react";
 import { KrispNoiseFilter } from "@livekit/krisp-noise-filter";
 import { convertWebmToWavBase64 } from "../utils/audioUtils";
 import { v4 as uuidv4 } from "uuid";
+import type { Conversation } from "../types/conversation";
 
 export default function InteractPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const username = searchParams.get("username");
-  const uuid = searchParams.get("uuid") || uuidv4(); // Generate new UUID if not provided
+  const [convUuid, setConvUuid] = useState(
+    searchParams.get("uuid") || uuidv4()
+  );
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const vad = useMicVAD({
     onSpeechEnd: (audio: Float32Array) => {
       console.log("User stopped talking");
@@ -28,6 +34,14 @@ export default function InteractPage() {
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingStartRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation?.messages]);
 
   useEffect(() => {
     if (!username) {
@@ -52,6 +66,7 @@ export default function InteractPage() {
       }
     };
   }, [username, router]);
+
   useEffect(() => {
     if (vad.userSpeaking) {
       // Clear any pause timer if it exists
@@ -86,7 +101,7 @@ export default function InteractPage() {
               // Convert the WebM blob to a WAV file as base64
               const wavBase64 = await convertWebmToWavBase64(webmBlob);
               const payload = {
-                id: uuid,
+                id: convUuid,
                 username: username,
                 data: wavBase64,
               };
@@ -95,7 +110,12 @@ export default function InteractPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
               })
-                .then((response) => {
+                .then(async (response) => {
+                  if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                  }
+                  const data: Conversation = await response.json();
+                  setConversation(data);
                   console.log("Audio sent. Duration:", duration, "ms");
                   setRecordedLength(duration);
                 })
@@ -131,33 +151,66 @@ export default function InteractPage() {
         }, 500); // Pause threshold set to 500ms
       }
     }
-  }, [vad.userSpeaking, isRecording]);
+  }, [vad.userSpeaking, isRecording, convUuid, username]);
+
+  if (!username) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Voice Chat Assistant
-        </h1>
-        <p className="text-gray-600">Welcome, {username}</p>
-        <div className="flex items-center justify-center space-x-2">
-          {vad.userSpeaking ? (
-            <>
-              <Mic className="text-green-500" />
-              <span className="text-green-500">User is speaking.</span>
-            </>
-          ) : (
-            <>
-              <MicOff className="text-red-500" />
-              <span className="text-red-500">User is silent.</span>
-            </>
-          )}
+    <div className="min-h-screen bg-white flex flex-col items-center p-4">
+      <div className="max-w-2xl w-full space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Voice Chat Assistant
+          </h1>
+          <p className="text-gray-600">Welcome, {username}</p>
         </div>
-        {recordedLength !== null && (
-          <div className="mt-4">
-            <p>Last sent audio duration: {recordedLength} ms</p>
+
+        {/* Conversation Display */}
+        <div className="bg-gray-50 rounded-lg p-4 h-[60vh] overflow-y-auto">
+          <div className="space-y-4">
+            {conversation?.messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg p-4 ${
+                    message.role === "user"
+                      ? "bg-black text-white"
+                      : "bg-gray-200 text-gray-900"
+                  }`}
+                >
+                  <p className="text-sm">{message.content}</p>
+                  <p className="text-xs mt-1 opacity-70">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
-        )}
+        </div>
+
+        {/* Recording Status */}
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-full shadow-lg">
+          <div className="flex items-center justify-center space-x-2">
+            {vad.userSpeaking ? (
+              <>
+                <Mic className="text-green-500 animate-pulse" />
+                <span className="text-green-500">Listening...</span>
+              </>
+            ) : (
+              <>
+                <MicOff className="text-gray-400" />
+                <span className="text-gray-400">Waiting for speech...</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

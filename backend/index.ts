@@ -9,6 +9,15 @@ import { generateAssistantResponse } from "./openai/assistant";
 const app = express();
 const port = 8081;
 
+const WAITER_PROMPT =
+  "You are a waiter, taking an order at a pizzeria restaurant. " +
+  "The order is being trascripted from voice, so the text might not 100% accurate." +
+  "In this case, try to guess what the user was trying to say. Make your best attempt at guessing," +
+  "and if you are not sure tell the user what you understand. If that's not right they will stop you and correct you." +
+  "If there are empty sentences picked up by background noise simply ignore them and reply with a simple hmhm as if you were listening" +
+  "If the audio picksup some nonsensical text, just ignore it and ask the user to repeat if you are missing context." +
+  " Next you can find the usual preferences and habits of the user. Use them to deduce context such as ordering the usual, or for small talk.\n";
+
 app.use(express.json());
 app.use(cors());
 
@@ -57,6 +66,7 @@ const convoSchema = z.object({
   username: z.string(),
   id: z.string(),
   message: z.string(),
+  user_summary: z.string().optional(),
 });
 
 // Assistant route to handle conversation messages
@@ -67,7 +77,7 @@ app.post("/api/assistant", async (req, res) => {
     return;
   }
 
-  const { username, id, message } = parseResult.data;
+  const { username, id, message, user_summary } = parseResult.data;
 
   // Initialize conversation if it doesn't exist
   if (!conversations[id]) {
@@ -75,7 +85,17 @@ app.post("/api/assistant", async (req, res) => {
       id,
       username,
       messages: [],
+      user_summary,
     };
+
+    // Add user summary as system message if present
+    if (user_summary) {
+      conversations[id].messages.push({
+        role: "system",
+        content: WAITER_PROMPT + user_summary,
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
   // Add user message to conversation

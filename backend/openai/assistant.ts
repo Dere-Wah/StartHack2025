@@ -9,6 +9,7 @@ export async function generateAssistantResponse(
   conversation: Conversation
 ): Promise<string> {
   try {
+    // Use conversation messages directly since system message is already included
     const messages = conversation.messages.map((msg) => ({
       role: msg.role,
       content: msg.content,
