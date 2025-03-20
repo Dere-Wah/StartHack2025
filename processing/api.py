@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
 import io
@@ -9,6 +10,14 @@ from assemblyainew import transcribe_audio_whisper
 from noisereducenew import reduce_audio_noise_from_audiofile, save_wav_file
 
 app = FastAPI()
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AudioRequest(BaseModel):
     id: str
