@@ -12,19 +12,20 @@ def initialize_database():
 
         data = [
             ("Marco",
-             "Marco enjoys classic Italian dishes and often orders spaghetti carbonara with extra crispy guanciale or lasagna al forno. He prefers his pasta al dente and avoids seafood due to a shellfish allergy. His go-to appetizer is a bruschetta with tomatoes and basil, and he always orders a glass of Chianti red wine. For dessert, he sometimes tries new options but usually sticks to tiramisu with a double espresso."),
+             "Marco is a fan of traditional Neapolitan pizza and always orders a classic Margherita with fresh buffalo mozzarella and basil. Occasionally, he enjoys a Quattro Formaggi pizza but avoids seafood toppings due to a shellfish allergy. He pairs his pizza with a glass of Chianti red wine and finishes his meal with a slice of tiramisu and a double espresso."),
             ("Laura",
-             "Laura follows a vegetarian diet and prefers whole grain pasta over regular pasta. She frequently orders zucchini and ricotta ravioli, chickpea soup, or a grilled vegetable platter with hummus. She is allergic to peanuts and always asks if a dish contains traces of them. She enjoys freshly squeezed orange juice and mint tea instead of coffee. For dessert, she usually picks a fruit salad or a vegan chocolate mousse."),
+             "Laura prefers vegetarian pizzas with whole wheat crust. Her go-to choices are a Verdure Grigliate pizza loaded with zucchini, eggplant, and bell peppers, or a Funghi e Tartufo pizza with wild mushrooms and truffle oil. She is allergic to peanuts and always ensures her food is free from cross-contamination. Her favorite drink is a freshly squeezed orange juice or an herbal mint tea. For dessert, she enjoys a fruit sorbet or a vegan chocolate mousse."),
             ("Davide",
-             "Davide enjoys grilled meats and often orders a medium-rare ribeye steak with a side of arugula and parmesan salad. He is lactose intolerant, so he avoids cheese-heavy dishes and creamy sauces. Occasionally, he orders grilled sea bass with lemon and rosemary, but he never eats raw seafood. His preferred starter is a platter of cured meats with sourdough bread. Instead of sugary drinks, he opts for sparkling water or a craft beer."),
+             "Davide enjoys meat-heavy pizzas and often orders a Diavola with spicy salami or a Boscaiola topped with sausage and mushrooms. Due to lactose intolerance, he opts for pizzas with lactose-free cheese or tomato-based options without dairy. He occasionally tries seafood pizzas but avoids raw toppings. His preferred drink is a craft beer or sparkling water. For dessert, he keeps it simple with an espresso or a small serving of dark chocolate."),
             ("Giulia",
-             "Giulia follows a high-protein diet and often orders a grilled chicken breast with quinoa and steamed broccoli. She avoids fried foods and refined sugars, preferring Greek yogurt with honey and almonds for dessert. She likes customizing her meals and frequently requests extra lean protein and a side of avocado. She drinks green tea or a protein smoothie instead of soft drinks.")
+             "Giulia follows a high-protein diet and often orders a Pollo e Avocado pizza with grilled chicken, avocado, and arugula on a thin crust. She avoids deep-dish and cheese-heavy pizzas, preferring light, nutritious toppings. Instead of soda, she drinks green tea or a protein smoothie. For dessert, she chooses Greek yogurt with honey and almonds or a protein-rich panna cotta.")
         ]
 
         # Insert data without updating existing records
         conn.executemany('''
 			INSERT OR IGNORE INTO users (username, summary) VALUES (?, ?)
 		''', data)
+
 
 
 def getSummary(username):
