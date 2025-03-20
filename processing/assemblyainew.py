@@ -77,4 +77,4 @@ def is_pertinent(transcribe: str):
     )
 
     response_text = response.choices[0].message.content.strip().upper()
-    return response_text == "TRUE"
+    return "TRUE" in response_text
