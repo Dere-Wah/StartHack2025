@@ -60,11 +60,10 @@ def transcribe_audio_whisper_stream(audio_bytes: bytes, language: str = "it"):
     return transcription
 
 def is_pertinent(transcribe: str):
-    client = OpenAI(api_key=OPENAI_KEY)
     systemprompt = """Respond to the following question only with "TRUE" or "FALSE".
                     \nDO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT. """
 
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": f"{systemprompt}"},
@@ -74,4 +73,4 @@ def is_pertinent(transcribe: str):
                                         """}
         ]
     )
-    return ("TRUE" in response.choices[0].message.content.upper().split(" ")) and not ("FALSE" in response.choices[0].message.content.upper().split(" "))
+    return ("TRUE" in response.choices[0].message.content.upper().split(" ")) and not ("FALSE" in response.choices[0].message.content.upper().split(" "))
