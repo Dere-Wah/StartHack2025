@@ -3,10 +3,15 @@ import tempfile
 
 import assemblyai as aai
 import openai as openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OPENAI_KEY = os.getenv('OPENAI_KEY')
 
 
-
-def transcribe_audio_assemblyai(file_url, api_key="8b60e56986004cf5b6ef48dfdb23f584"):
+def transcribe_audio_assemblyai(file_url, api_key=OPENAI_KEY):
     """
   Transcribes an audio file using AssemblyAI API with speaker labels.
 
