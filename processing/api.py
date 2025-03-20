@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from fastapi import FastAPI, HTTPException
@@ -42,7 +43,6 @@ class AnalyzeConversation(BaseModel):
 @app.post("/analyze")
 async def analyze_json(request: AnalyzeConversation):
     try:
-        print(request.final_json)
         generate_summary(request.final_json)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing audio: {str(e)}")
@@ -65,37 +65,20 @@ async def process_audio(request: AudioRequest):
         transcription = transcribe_audio(
             rate=rate,
             reduced_noise=reduced_noise,
-            system_prompt="This is a customer taking an order from a pizzeria. The customer's name is " + request.username + " and the user is talking in english."
+            system_prompt="Uhmmm, my name is uhh" + request.username + "and I am making uhh an order at an Italian Pizzeria."
         )
-        #endpoint = "https://waiter-api.derewah.dev/api/assistant"
-        endpoint = "https://waiter-api.derewah.dev/api/assistant"
-
-        summ = getSummary(request.username)
-        if(summ == None):
-            summ = "NONE"
-        print(summ)
-
-        # Send transcription to external API using requests
-        api_response = requests.post(
-            endpoint,
-            json={
-                "username": request.username,
-                "id": request.id,  # Use the provided id from the request
-                "message": transcription,
-                "user_summary": summ
-            }
-        )
-        api_response.raise_for_status()  # Raise exception for HTTP errors
-
-
-        intermediate_response = api_response.json()
-
-        # Return the JSON response from the external API
-        return intermediate_response
+        result = {"transcription": transcription, "user_summary": getSummary(request.username)}
+        return result
 
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=400, detail=f"Error processing audio: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8082, reload=True)
+
+
+
+
+

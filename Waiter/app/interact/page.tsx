@@ -3,12 +3,24 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Mic, MicOff } from "lucide-react";
-import { BACKEND_SERVER } from "../endpoints";
+import { BACKEND_SERVER, PYTHON_SERVER, WS_SERVER } from "../endpoints";
 import { useMicVAD } from "@ricky0123/vad-react";
-import { KrispNoiseFilter } from "@livekit/krisp-noise-filter";
 import { convertWebmToWavBase64 } from "../utils/audioUtils";
 import { v4 as uuidv4 } from "uuid";
 import type { Conversation } from "../types/conversation";
+
+interface MessageDelta {
+  type: string;
+  delta: {
+    text: string;
+    messageId: string;
+  };
+}
+
+interface TranscriptMessage {
+  type: string;
+  transcript: string;
+}
 
 export default function InteractPage() {
   const searchParams = useSearchParams();
@@ -19,6 +31,9 @@ export default function InteractPage() {
   );
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const currentMessageIdRef = useRef<string | null>(null);
+  const lastDeltaTextRef = useRef<string>("");
 
   const vad = useMicVAD({
     onSpeechEnd: (audio: Float32Array) => {
@@ -43,11 +58,125 @@ export default function InteractPage() {
     scrollToBottom();
   }, [conversation?.messages]);
 
+  // WebSocket connection setup
   useEffect(() => {
     if (!username) {
       router.push("/");
       return;
     }
+
+    // Initialize WebSocket connection
+    wsRef.current = new WebSocket(WS_SERVER + "/api/ws");
+
+    wsRef.current.onopen = () => {
+      console.log("WebSocket connected");
+      // Send initial greeting message
+      if (wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            greet_type: "greet_audio",
+            uuid: convUuid,
+            username: username,
+          })
+        );
+      }
+    };
+
+    wsRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "assistant_response") {
+        const messageData = data as MessageDelta;
+        setConversation((prev) => {
+          if (!prev) {
+            currentMessageIdRef.current = messageData.delta.messageId;
+            lastDeltaTextRef.current = messageData.delta.text;
+            return {
+              id: convUuid,
+              username: username,
+              messages: [
+                {
+                  role: "assistant",
+                  content: messageData.delta.text,
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+
+          // If this is a new message (different messageId)
+          if (currentMessageIdRef.current !== messageData.delta.messageId) {
+            currentMessageIdRef.current = messageData.delta.messageId;
+            lastDeltaTextRef.current = messageData.delta.text;
+            return {
+              ...prev,
+              messages: [
+                ...prev.messages,
+                {
+                  role: "assistant",
+                  content: messageData.delta.text,
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+
+          // Update the last message by appending the new text
+          const updatedMessages = [...prev.messages];
+          const lastMessage = updatedMessages[updatedMessages.length - 1];
+          if (lastMessage && lastMessage.role === "assistant") {
+            // Only append if this is new text
+            if (messageData.delta.text !== lastDeltaTextRef.current) {
+              lastMessage.content =
+                lastMessage.content + messageData.delta.text;
+              lastDeltaTextRef.current = messageData.delta.text;
+            }
+          }
+
+          return {
+            ...prev,
+            messages: updatedMessages,
+          };
+        });
+      } else if (data.type === "transcript") {
+        const transcriptData = data as TranscriptMessage;
+        setConversation((prev) => {
+          if (!prev) {
+            return {
+              id: convUuid,
+              username: username,
+              messages: [
+                {
+                  role: "transcript",
+                  content: transcriptData.transcript,
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+
+          return {
+            ...prev,
+            messages: [
+              ...prev.messages,
+              {
+                role: "transcript",
+                content: transcriptData.transcript,
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          };
+        });
+      }
+    };
+
+    wsRef.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    wsRef.current.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
 
     // Request microphone access
     navigator.mediaDevices
@@ -59,13 +188,16 @@ export default function InteractPage() {
         console.error("Error accessing microphone:", err);
       });
 
-    // Clean up stream on unmount
+    // Cleanup function
     return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [username, router]);
+  }, [username, router, convUuid]);
 
   useEffect(() => {
     // Check for CONVERSATION_END in the latest assistant message
@@ -74,11 +206,15 @@ export default function InteractPage() {
 
     if (
       lastMessage?.role === "assistant" &&
+      lastMessage.content &&
       lastMessage.content.includes("CONVERSATION_END")
     ) {
-      // Stop all audio tracks
+      // Stop all audio tracks and close WebSocket
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
       }
 
       // Send conversation for analysis
@@ -91,8 +227,8 @@ export default function InteractPage() {
           timestamp: msg.timestamp,
         })),
       });
-
-      fetch("https://waiter-api.derewah.dev/analyze", {
+      router.push("/finalize");
+      fetch(`${PYTHON_SERVER}/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,9 +243,7 @@ export default function InteractPage() {
           }
           return response.json();
         })
-        .then(() => {
-          router.push("/finalize");
-        })
+        .then(() => {})
         .catch((error) => {
           console.error("Failed to send conversation for analysis:", error);
           router.push("/finalize"); // Still redirect even if analysis fails
@@ -150,29 +284,23 @@ export default function InteractPage() {
             try {
               // Convert the WebM blob to a WAV file as base64
               const wavBase64 = await convertWebmToWavBase64(webmBlob);
-              const payload = {
-                id: convUuid,
-                username: username,
-                data: wavBase64,
-              };
-              fetch("https://waiter-api.derewah.dev/audio", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-              })
-                .then(async (response) => {
-                  if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                  }
-                  const data: Conversation = await response.json();
-                  setConversation(data);
-                  console.log("Audio sent. Duration:", duration, "ms");
-                  setRecordedLength(duration);
-                })
-                .catch((error) => {
-                  console.error("Failed to send audio:", error);
-                  setRecordedLength(duration);
-                });
+
+              // Send audio data through WebSocket
+              if (
+                wsRef.current &&
+                wsRef.current.readyState === WebSocket.OPEN
+              ) {
+                wsRef.current.send(
+                  JSON.stringify({
+                    type: "audio",
+                    data: wavBase64,
+                    username: username,
+                    id: convUuid,
+                  })
+                );
+              }
+
+              setRecordedLength(duration);
             } catch (error) {
               console.error("Error converting audio:", error);
             }
@@ -201,7 +329,7 @@ export default function InteractPage() {
         }, 500); // Pause threshold set to 500ms
       }
     }
-  }, [vad.userSpeaking, isRecording, convUuid, username]);
+  }, [vad.userSpeaking, isRecording]);
 
   if (!username) {
     return null;
@@ -226,6 +354,7 @@ export default function InteractPage() {
                   message.role !== "system" &&
                   !(
                     message.role === "assistant" &&
+                    message.content &&
                     message.content.includes("CONVERSATION_END")
                   )
               )
@@ -240,6 +369,8 @@ export default function InteractPage() {
                     className={`max-w-[80%] rounded-lg p-4 ${
                       message.role === "user"
                         ? "bg-black text-white"
+                        : message.role === "transcript"
+                        ? "bg-blue-100 text-gray-900"
                         : "bg-gray-200 text-gray-900"
                     }`}
                   >

@@ -18,7 +18,9 @@ def initialize_database():
             ("Davide",
              "Davide enjoys meat-heavy pizzas and often orders a Diavola with spicy salami or a Boscaiola topped with sausage and mushrooms. Due to lactose intolerance, he opts for pizzas with lactose-free cheese or tomato-based options without dairy. He occasionally tries seafood pizzas but avoids raw toppings. His preferred drink is a craft beer or sparkling water. For dessert, he keeps it simple with an espresso or a small serving of dark chocolate."),
             ("Giulia",
-             "Giulia follows a high-protein diet and often orders a Pollo e Avocado pizza with grilled chicken, avocado, and arugula on a thin crust. She avoids deep-dish and cheese-heavy pizzas, preferring light, nutritious toppings. Instead of soda, she drinks green tea or a protein smoothie. For dessert, she chooses Greek yogurt with honey and almonds or a protein-rich panna cotta.")
+             "Giulia follows a high-protein diet and often orders a Pollo e Avocado pizza with grilled chicken, avocado, and arugula on a thin crust. She avoids deep-dish and cheese-heavy pizzas, preferring light, nutritious toppings. Instead of soda, she drinks green tea or a protein smoothie. For dessert, she chooses Greek yogurt with honey and almonds or a protein-rich panna cotta."),
+            ("Bob",
+            "NONE")
         ]
 
         # Insert data without updating existing records

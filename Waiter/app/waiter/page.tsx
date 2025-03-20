@@ -16,10 +16,15 @@ export default function WaiterPage() {
     const newUuid = uuidv4();
     setUuid(newUuid);
 
-    const ws = new WebSocket(`${BACKEND_SERVER}/api/auth`);
+    const ws = new WebSocket(`${BACKEND_SERVER}/api/ws`);
 
     ws.onopen = () => {
       setWsConnected(true);
+      ws.send(
+        JSON.stringify({
+          greet_type: "identify",
+        })
+      );
     };
 
     ws.onmessage = (event) => {

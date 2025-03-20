@@ -8,7 +8,7 @@ from openai import OpenAI
 load_dotenv()
 OPENAI_KEY = os.getenv('OPENAI_KEY')
 
-def transcribe_audio(rate, reduced_noise, system_prompt=""):
+def transcribe_audio(rate, reduced_noise, system_prompt):
     """
     Transcribe audio using OpenAI's Whisper API
 
@@ -27,7 +27,6 @@ def transcribe_audio(rate, reduced_noise, system_prompt=""):
 
     # Create OpenAI client
     client = OpenAI(api_key=OPENAI_KEY)
-
     # Transcribe with Whisper
     transcription = client.audio.transcriptions.create(
         model="whisper-1",

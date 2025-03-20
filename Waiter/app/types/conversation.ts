@@ -1,5 +1,5 @@
 export interface Message {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "transcript";
   content: string;
   timestamp: string;
 }

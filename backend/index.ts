@@ -3,22 +3,12 @@ import { WebSocketServer, WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import cors from "cors";
-import type { Conversation, Conversations } from "./types";
-import { generateAssistantResponse } from "./openai/assistant";
+import type { Conversation } from "./types";
+import { conversations } from "./openai/assistant";
+import { handleAudioMessage, type AudioWebSocket } from "./audio/handler";
 
 const app = express();
 const port = 8081;
-
-const WAITER_PROMPT =
-  "You are a waiter, taking an order at a pizzeria restaurant. " +
-  "When the user explicitly tells you that the conversation is over, and they already have given you the order, please send a message with the keyword CONVERSATION_END" +
-  "The order is being trascripted from voice, so the text might not 100% accurate." +
-  "In this case, try to guess what the user was trying to say. Make your best attempt at guessing," +
-  "and if you are not sure tell the user what you understand. If that's not right they will stop you and correct you." +
-  "If there are empty sentences picked up by background noise simply ignore them and reply with a simple hmhm as if you were listening" +
-  "If the audio picksup some nonsensical text, just ignore it and ask the user to repeat if you are missing context." +
-  +"If you are unsure about something the customer told you, becuase it got lost in the noise, try to predict it with the summary you have. Maybe do some small talk about it." +
-  " Next you can find the usual preferences and habits of the user. Use them to deduce context such as ordering the usual, or for small talk.\n";
 
 app.use(express.json());
 app.use(cors());
@@ -27,27 +17,74 @@ app.use(cors());
 const wss = new WebSocketServer({ noServer: true });
 
 // Pool to store all connected WebSocket clients
-const websocketPool: Set<WebSocket> = new Set();
-
-// Store for conversations
-const conversations: Conversations = {};
+const websocketPool: Set<AudioWebSocket> = new Set();
 
 // Handle WebSocket connections
 wss.on("connection", (ws: WebSocket, request: Request) => {
   console.log("Opening a websocket.");
-  // Add the new WebSocket connection to the pool
-  websocketPool.add(ws);
+  const audioWs = ws as AudioWebSocket;
+  audioWs.isGreeted = false;
 
-  // Remove the WebSocket from the pool when it closes
-  ws.on("close", () => {
-    console.log("Closing a websocket.");
-    websocketPool.delete(ws);
+  // Handle messages
+  audioWs.on("message", async (message: string) => {
+    try {
+      const data = JSON.parse(message);
+
+      // Handle initial greeting
+      if (!audioWs.isGreeted) {
+        if (
+          data.greet_type === "identify" ||
+          data.greet_type === "greet_audio"
+        ) {
+          audioWs.isGreeted = true;
+          audioWs.type = data.greet_type === "identify" ? "identify" : "audio";
+          websocketPool.add(audioWs);
+          console.log(`Websocket greeted with type: ${audioWs.type}`);
+          audioWs.send(JSON.stringify({ type: "greeting_accepted" }));
+          return;
+        } else {
+          console.log("Invalid greeting message");
+          audioWs.close();
+          return;
+        }
+      }
+
+      // Handle messages based on websocket type
+      if (audioWs.type === "audio" && data.type === "audio") {
+        if (!data.username || !data.id) {
+          audioWs.send(
+            JSON.stringify({
+              type: "error",
+              error: "Missing username or conversation ID",
+            })
+          );
+          return;
+        }
+        await handleAudioMessage(data.data, data.username, data.id, audioWs);
+      } else if (audioWs.type === "identify") {
+        console.log("Received message from identify websocket:", data);
+      }
+    } catch (error) {
+      console.error("Error processing websocket message:", error);
+      audioWs.send(
+        JSON.stringify({
+          type: "error",
+          error: "Failed to process message",
+        })
+      );
+    }
   });
 
-  // Ignore messages from the client
-  ws.on("message", (message) => {
-    console.log(message);
-    // No processing needed per requirements
+  // Remove the WebSocket from the pool when it closes
+  audioWs.on("close", () => {
+    console.log("Closing a websocket.");
+    websocketPool.delete(audioWs);
+  });
+
+  // Handle WebSocket errors
+  audioWs.on("error", (error) => {
+    console.error("WebSocket error:", error);
+    websocketPool.delete(audioWs);
   });
 });
 
@@ -58,77 +95,10 @@ interface User {
 }
 
 const users: User[] = [
-  { username: "Davide", password: "davide123" },
-  { username: "Marco", password: "marco123" },
-  { username: "Laura", password: "laura123" },
-  { username: "Giulia", password: "giulia123" },
+  { username: "Bobby", password: "password123" },
+  { username: "Alice", password: "alicepwd" },
+  { username: "Filippo", password: "fil03" },
 ];
-
-// Define the schema for the assistant request payload
-const convoSchema = z.object({
-  username: z.string(),
-  id: z.string(),
-  message: z.string(),
-  user_summary: z.string().optional(),
-});
-
-// Assistant route to handle conversation messages
-app.post("/api/assistant", async (req, res) => {
-  const parseResult = convoSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    res.status(400).json({ error: parseResult.error.errors });
-    return;
-  }
-
-  const { username, id, message, user_summary } = parseResult.data;
-
-  // Initialize conversation if it doesn't exist
-  if (!conversations[id]) {
-    conversations[id] = {
-      id,
-      username,
-      messages: [],
-      user_summary,
-    };
-
-    // Add user summary as system message if present
-    if (user_summary) {
-      conversations[id].messages.push({
-        role: "system",
-        content:
-          WAITER_PROMPT + user_summary + " Also the user is called " + username,
-        timestamp: new Date().toISOString(),
-      });
-    }
-  }
-
-  // Add user message to conversation
-  conversations[id].messages.push({
-    role: "user",
-    content: message,
-    timestamp: new Date().toISOString(),
-  });
-
-  try {
-    // Generate assistant response
-    const assistantResponse = await generateAssistantResponse(
-      conversations[id]
-    );
-
-    // Add assistant response to conversation
-    conversations[id].messages.push({
-      role: "assistant",
-      content: assistantResponse,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Return the full conversation
-    res.json(conversations[id]);
-  } catch (error) {
-    console.error("Error in assistant endpoint:", error);
-    res.status(500).json({ error: "Failed to process assistant response" });
-  }
-});
 
 // Define the schema for the login request payload
 const loginSchema = z.object({
@@ -154,7 +124,7 @@ app.post("/api/login", (req, res) => {
     const payload = JSON.stringify({ username, id });
     // Broadcast the payload to all connected WebSocket clients
     for (const ws of websocketPool) {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === WebSocket.OPEN && ws.type === "identify") {
         ws.send(payload);
       }
     }
@@ -174,9 +144,10 @@ const server = app.listen(port, () => {
   console.log(`Listening on port ${port}...`);
 });
 
-// Upgrade HTTP server to handle WebSocket connections on /api/auth
+// Upgrade HTTP server to handle WebSocket connections on /api/ws
 server.on("upgrade", (request, socket, head) => {
-  if (request.url === "/api/auth") {
+  console.log("Upgrade request for:", request.url);
+  if (request.url === "/api/ws") {
     wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
       wss.emit("connection", ws, request);
     });
