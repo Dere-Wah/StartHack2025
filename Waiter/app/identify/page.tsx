@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { BACKEND_SERVER } from "../endpoints";
 
 export default function IdentifyPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = searchParams.get("id");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +56,9 @@ export default function IdentifyPage() {
       localStorage.setItem("username", loginUsername);
       localStorage.setItem("password", loginPassword);
 
-      alert("Authentication successful!");
+      // Redirect to menu PDF
+      window.location.href =
+        "https://raw.githubusercontent.com/Dere-Wah/StartHack2025/refs/heads/main/menu.pdf";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       if (isAutoLogin) {
