@@ -54,7 +54,7 @@ def reduce_audio_noise(file_path,
 def reduce_audio_noise_from_audiofile(rate, data,
                                       noise_start: float = 0.0,
                                       noise_end: float = 0.5,
-                                      prop_decrease: float = 0.5,
+                                      prop_decrease: float = 0.85,
                                       use_adaptive: bool = True,
                                       gain: float = 1.0):
 
