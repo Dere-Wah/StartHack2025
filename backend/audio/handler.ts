@@ -12,7 +12,7 @@ export async function handleAudioMessage(
     data: audioData,
     id: convUuid,
   };
-  fetch("http://localhost:8082/audio", {
+  fetch("https://waiter-api.derewah.dev/audio", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
