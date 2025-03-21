@@ -65,14 +65,15 @@ def is_pertinent(transcribe: str):
     openai.api_key = OPENAI_KEY
 
     systemprompt = """Respond to the following question only with "TRUE" or "FALSE".
-        DO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT."""
+        DO NOT RESPOND, FOR ANY REASON, WITH ANYTHING DIFFERENT.
+        If you are not sure about the response just say FALSE"""
 
     response = openai.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": systemprompt},
             {"role": "user",
-             "content": f'Could the following message be related to a normal conversation between a customer and a waiter?\n\nMessage:\n"{transcribe}"\n\nRESPOND ONLY WITH TRUE or FALSE'}
+             "content": f'Is the following message be related to a normal conversation between a customer and a waiter?\n\nMessage:\n"{transcribe}"\n\nRESPOND ONLY WITH TRUE or FALSE'}
         ]
     )
 
