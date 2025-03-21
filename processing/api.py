@@ -66,8 +66,7 @@ async def process_audio(request: AudioRequest):
         # Transcribe the audio
         transcription = transcribe_audio(
             rate=rate,
-            reduced_noise=reduced_noise,
-            system_prompt="Uhmmm, my name is uhh" + request.username + "and I am making uhh an order at an Italian Pizzeria."
+            reduced_noise=reduced_noise
         )
         summaries = getRecap(request.username)
         print(summaries)
